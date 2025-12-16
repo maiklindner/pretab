@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "Pretab - Previous tab"
+  },
+  "extDescription": {
+    "message": "Switches back to the last active tab after closing a tab."
+  }
+}
