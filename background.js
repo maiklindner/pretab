@@ -1,43 +1,110 @@
-// Eine Liste, um die Reihenfolge der Tabs zu speichern
+// Liste für die Historie (Standard-Verhalten)
 let tabHistory = [];
 
-// Event: Wenn ein Tab aktiviert (angeklickt) wird
+// Set für Tabs, die im Hintergrund geöffnet und noch nicht angesehen wurden
+let unseenTabs = new Set();
+
+// Flag: War der gerade aktive Tab einer aus der "Unseen"-Liste?
+let lastActiveWasUnseen = false;
+
+// Hilfsvariable: Welcher Tab wurde gerade eben erst "entdeckt"?
+// Das verhindert das Überspringen, wenn Chrome schneller ist als unser Skript.
+let justAckowledgedId = null;
+
+// Event: Ein neuer Tab wird erstellt
+chrome.tabs.onCreated.addListener((tab) => {
+    if (!tab.active) {
+        unseenTabs.add(tab.id);
+    }
+});
+
+// Event: Ein Tab wird aktiviert (angeklickt)
 chrome.tabs.onActivated.addListener((activeInfo) => {
     const tabId = activeInfo.tabId;
 
-    // Entferne die ID, falls sie schon in der Liste ist (um Duplikate zu vermeiden)
+    if (unseenTabs.has(tabId)) {
+        // Wir haben einen neuen Tab betreten
+        unseenTabs.delete(tabId);
+        lastActiveWasUnseen = true;
+        // WICHTIG: Wir merken uns diese ID kurzzeitig
+        justAckowledgedId = tabId;
+    } else {
+        // Wir sind auf einem normalen Tab
+        lastActiveWasUnseen = false;
+        justAckowledgedId = null;
+    }
+
+    // Standard Historien-Logik
     tabHistory = tabHistory.filter(id => id !== tabId);
-    
-    // Füge die aktuelle Tab-ID ans Ende der Liste hinzu
     tabHistory.push(tabId);
-    
-    // Optional: Begrenze die Historie auf z.B. 50 Einträge, um Speicher zu sparen
     if (tabHistory.length > 50) {
         tabHistory.shift();
     }
 });
 
-// Event: Wenn ein Tab geschlossen wird
+// Event: Ein Tab wird geschlossen
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    // Entferne den geschlossenen Tab aus der Historie
+    if (unseenTabs.has(tabId)) {
+        unseenTabs.delete(tabId);
+    }
+
     tabHistory = tabHistory.filter(id => id !== tabId);
 
-    // Wenn noch Tabs in der Historie sind
-    if (tabHistory.length > 0) {
-        // Hole den letzten Tab aus der Liste (das war der vorherige)
-        const lastActiveTabId = tabHistory[tabHistory.length - 1];
+    // Wenn wir im "Batch-Modus" waren (neue Tabs abarbeiten)
+    if (lastActiveWasUnseen) {
+        
+        // Prüfen, wo wir gerade sind
+        chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+            const currentTab = tabs[0];
 
-        // Versuche, diesen Tab zu aktivieren
-        chrome.tabs.update(lastActiveTabId, { active: true }).catch((error) => {
-            // Falls der Tab nicht mehr existiert (Fehlerfall), entferne ihn auch
-            console.log("Tab existiert nicht mehr, wird aus Historie entfernt.");
-            tabHistory.pop();
+            // FIX: Wenn der Browser automatisch schon zum nächsten "neuen" Tab gesprungen ist,
+            // dann haben wir diesen gerade in onActivated registriert (justAckowledgedId).
+            // In diesem Fall: NICHTS tun, wir sind schon genau da, wo wir hinwollten.
+            if (currentTab && currentTab.id === justAckowledgedId) {
+                return; 
+            }
+
+            // Falls wir woanders gelandet sind (z.B. Chrome ist zum Eltern-Tab gesprungen),
+            // dann erzwingen wir den Sprung zum nächsten neuen Tab.
+            if (unseenTabs.size > 0) {
+                chrome.tabs.query({ currentWindow: true }, (allTabs) => {
+                    const nextTab = allTabs.find(t => unseenTabs.has(t.id));
+                    if (nextTab) {
+                        chrome.tabs.update(nextTab.id, { active: true });
+                    } else {
+                        // Keine neuen Tabs mehr im Fenster -> Historie
+                        activateLastHistoryTab();
+                    }
+                });
+            } else {
+                // Liste leer -> Historie
+                activateLastHistoryTab();
+            }
         });
+
+    } else {
+        // Standard-Verhalten
+        activateLastHistoryTab();
     }
 });
 
-// Event: Bereinigung, falls Tabs im Hintergrund ersetzt werden
+// Hilfsfunktion
+function activateLastHistoryTab() {
+    if (tabHistory.length > 0) {
+        const lastActiveTabId = tabHistory[tabHistory.length - 1];
+        chrome.tabs.update(lastActiveTabId, { active: true }).catch(() => {
+            tabHistory.pop();
+            activateLastHistoryTab();
+        });
+    }
+}
+
+// Event: Bereinigung bei Tab-Ersetzung
 chrome.tabs.onReplaced.addListener((addedTabId, removedTabId) => {
     tabHistory = tabHistory.filter(id => id !== removedTabId);
     tabHistory.push(addedTabId);
+    if (unseenTabs.has(removedTabId)) {
+        unseenTabs.delete(removedTabId);
+        unseenTabs.add(addedTabId);
+    }
 });
