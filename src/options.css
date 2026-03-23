@@ -35,12 +35,14 @@ body {
   background-color: var(--bg-color);
   color: var(--text-color);
   margin: 0;
-  padding: 0;
+  padding: 20px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
 }
 
 .container {
@@ -52,7 +54,18 @@ body {
   max-width: 800px;
   border: 1px solid var(--border-color);
   box-sizing: border-box;
-  margin: 2em;
+}
+
+footer {
+  margin-top: 24px;
+  text-align: center;
+  color: var(--label-color);
+  font-size: 13px;
+  opacity: 0.5;
+}
+
+footer p {
+  margin: 0;
 }
 
 /* Header matching PagePalette */
@@ -63,16 +76,16 @@ header {
 }
 
 h1 {
-  font-size: 24px;
+  font-size: 1.5rem;
   color: var(--text-color);
   font-weight: 700;
   margin-top: 0;
-  margin-bottom: 8px;
+  margin-bottom: 0.5rem;
   letter-spacing: -0.025em;
 }
 
 h2 {
-  font-size: 20px;
+  font-size: 1.25rem;
   color: var(--text-color);
   font-weight: 600;
   margin: 0;
@@ -85,36 +98,48 @@ p#optionsDescription {
   margin-bottom: 0;
 }
 
-.setting-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5em;
-  padding-bottom: 1.5em;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.setting-row:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.setting-info {
-  flex: 1;
-  padding-right: 1.5em;
-}
-
-.setting-title {
-  font-weight: 600;
-  font-size: 1.1em;
-  margin-bottom: 0.4em;
-}
-
-.setting-desc {
-  font-size: 0.9em;
+.form-group label {
+  display: block;
+  font-size: 0.9rem;
   color: var(--label-color);
-  line-height: 1.4;
+  margin-bottom: 0.6rem;
+  font-weight: 600;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background-color: var(--input-bg-color);
+  color: var(--text-color);
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 0.875rem;
+  margin-top: 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background-color: var(--primary-color);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+footer {
+  margin-top: 1.5rem;
+  text-align: center;
+  color: var(--label-color);
+  font-size: 0.8125rem;
+  opacity: 0.5;
 }
 
 select {
@@ -178,3 +203,4 @@ input:focus + .slider {
 input:checked + .slider:before {
   transform: translateX(22px);
 }
+
